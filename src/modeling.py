@@ -180,19 +180,66 @@ class Encoder(nn.Module):
 ### Decoder 
 
 
+
+class Attention(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.W = nn.Linear(input_dim, output_dim)
+        self.V = nn.Linear(output_dim, 1)
+
+        self.tanh = nn.Tanh()
+
+        self.rnn = nn.GRU(output_dim, output_dim, batch_first=True)
+
+    def forward(self, encoder_output, decoder_hidden = None):
+        # encoder_output: [batch_size, seq_len, hidden_size]
+        # decoder_hidden: [batch_size, 1, hidden_size]
+
+        # [batch_size, seq_len, hidden_size]
+        encoder_output = self.W(encoder_output)
+
+        # [batch_size, 1, hidden_size]
+        decoder_hidden = self.W(decoder_hidden)
+
+        # [batch_size, seq_len, 1]
+        attn_score = self.V(self.tanh(encoder_output + decoder_hidden))
+
+        # [batch_size, seq_len]
+        attn_score = attn_score.squeeze(-1)
+
+        # [batch_size, seq_len]
+        attn_weight = F.softmax(attn_score, dim=-1)
+
+        # [batch_size, 1, seq_len]
+        attn_weight = attn_weight.unsqueeze(1)
+
+        # [batch_size, 1, hidden_size]
+        context = torch.bmm(attn_weight, encoder_output)
+
+        # [batch_size, 1, hidden_size]
+        decoder_output, decoder_hidden = self.rnn(context, decoder_hidden)
+
+        return decoder_output, decoder_hidden, attn_weight
+    
+
+
+
+
 class DecoderPrenet(EncoderPrenet):
     def __init__(self, input_dim, output_dim_1, output_dim_2):
         super().__init__(input_dim, output_dim_1, output_dim_2)
 
     def forward(self, x):
         return super().forward(x)
+    
 
 
 
 
 
 
-
+    
+ 
 
 
 
@@ -217,11 +264,16 @@ if __name__ == "__main__":
 
     output = embedding(input_id)
 
-    print(f"the output shape after embedding is {output.shape}")
-
+ 
     output = encoder(output)
 
-    print(f"the output shape after encoder is {output.shape}")
+    attention = Attention(256, 256)
+
+    decoder_hidden = torch.zeros(1, 256)
+
+    context = attention(output, decoder_hidden)
+
+    print(context)
 
 
     
