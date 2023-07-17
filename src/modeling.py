@@ -153,9 +153,6 @@ class CBHG(nn.Module):
         return gru_output
 
 
-
-
-
 class Encoder(nn.Module):
     def __init__(
         self,
@@ -175,20 +172,25 @@ class Encoder(nn.Module):
         prenet = self.pre_net(x)
         cbhg = self.cbhg(prenet)
         return cbhg
-    
 
-### Decoder 
+
+### Decoder
 
 
 class Attention(nn.Module):
-    def __init__(self, input_dim  , hidden_dim):
+    def __init__(self, input_dim, hidden_dim):
         super(Attention, self).__init__()
         self.Wa = nn.Linear(input_dim, hidden_dim)
         self.Ua = nn.Linear(input_dim, hidden_dim)
         self.Va = nn.Linear(input_dim, 1)
 
     def forward(self, query, keys):
+
+   
         scores = self.Va(torch.tanh(self.Wa(query) + self.Ua(keys)))
+
+        print(f"the scores shape {scores.shape}")
+
         scores = scores.squeeze(2).unsqueeze(1)
 
         weights = F.softmax(scores, dim=-1)
@@ -207,20 +209,22 @@ class AttentionRNN(nn.Module):
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x, hidden):
-        print(f"hidden shape {hidden.shape}")
+     
         context, weights = self.attention(hidden, x)
-        print(context.shape)
-        rnn_input = torch.cat((context, hidden), dim=0)
+        print("the output attention" , context.shape)
+        rnn_input = torch.cat((context, hidden), dim=2)
         output, hidden = self.rnn(rnn_input, hidden)
         output = self.fc(output)
         return output, hidden, weights
+
+
+class DecoderPrenett(EncoderPrenet):
+    def __init__(self, input_dim, output_dim_1, output_dim_2):
+        super().__init__(input_dim, output_dim_1, output_dim_2)
+
+    def forward(self, x):
+        return super().forward(x)
     
-
-
-
-
-
-
 
 
 
@@ -244,16 +248,16 @@ if __name__ == "__main__":
     encoder = Encoder(input_dim=256, output_dim_1=128, output_dim_2=128)
 
     output = encoder(embedding(input_id))
+ 
 
-  
+    input_decoder = torch.zeros((1, 1, 256))
 
-    rnnattention = AttentionRNN(256 , 256 , 256)
+    decoder = AttentionRNN(input_dim=256, hidden_dim=256, output_dim=256)
 
-    output , hidden , attention_weights = rnnattention(output , output)
+    output, hidden, weights = decoder(output, input_decoder)
 
-   
+    print(output)
 
 
 
-    
 
