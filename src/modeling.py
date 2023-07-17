@@ -180,113 +180,40 @@ class Encoder(nn.Module):
 ### Decoder 
 
 
-
 class Attention(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super().__init__()
-        self.W = nn.Linear(input_dim, output_dim)
-        self.V = nn.Linear(output_dim, 1)
+    def __init__(self, input_dim  , hidden_dim):
+        super(Attention, self).__init__()
+        self.Wa = nn.Linear(input_dim, hidden_dim)
+        self.Ua = nn.Linear(input_dim, hidden_dim)
+        self.Va = nn.Linear(input_dim, 1)
 
-        self.tanh = nn.Tanh()
+    def forward(self, query, keys):
+        scores = self.Va(torch.tanh(self.Wa(query) + self.Ua(keys)))
+        scores = scores.squeeze(2).unsqueeze(1)
 
-        self.rnn = nn.GRU(output_dim, output_dim, batch_first=True)
+        weights = F.softmax(scores, dim=-1)
+        context = torch.bmm(weights, keys)
 
-    def forward(self, encoder_output, decoder_hidden = None):
-        # encoder_output: [batch_size, seq_len, hidden_size]
-        # decoder_hidden: [batch_size, 1, hidden_size]
-
-        # [batch_size, seq_len, hidden_size]
-        encoder_output = self.W(encoder_output)
-
-        # [batch_size, 1, hidden_size]
-        decoder_hidden = self.W(decoder_hidden)
-
-        # [batch_size, seq_len, 1]
-        attn_score = self.V(self.tanh(encoder_output + decoder_hidden))
-
-        # [batch_size, seq_len]
-        attn_score = attn_score.squeeze(-1)
-
-        # [batch_size, seq_len]
-        attn_weight = F.softmax(attn_score, dim=-1)
-
-        # [batch_size, 1, seq_len]
-        attn_weight = attn_weight.unsqueeze(1)
-
-        # [batch_size, 1, hidden_size]
-        context = torch.bmm(attn_weight, encoder_output)
-
-        # [batch_size, 1, hidden_size]
-        decoder_output, decoder_hidden = self.rnn(context, decoder_hidden)
-
-        return decoder_output, decoder_hidden, attn_weight
-    
+        return context, weights
 
 
 
+class AttentionRNN(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim):
+        super(AttentionRNN, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.attention = Attention(input_dim, hidden_dim)
+        self.rnn = nn.GRU(input_dim + hidden_dim, hidden_dim, batch_first=True)
+        self.fc = nn.Linear(hidden_dim, output_dim)
 
-class DecoderPrenet(EncoderPrenet):
-    def __init__(self, input_dim, output_dim_1, output_dim_2):
-        super().__init__(input_dim, output_dim_1, output_dim_2)
-
-    def forward(self, x):
-        return super().forward(x)
-    
-
-
-
-class Decoder(nn.Module):
-    # 2-layer residual GRU (256 cells)
-    def __init__(self, input_dim, output_dim):
-        super().__init__()
-        self.rnn1 = nn.GRU(input_dim, output_dim, batch_first=True)
-        self.rnn2 = nn.GRU(output_dim, output_dim, batch_first=True)
-
-    def forward(self, x):
-        rnn1_output, _ = self.rnn1(x)
-        rnn2_output, _ = self.rnn2(rnn1_output + x)
-        return rnn2_output + rnn1_output + x
-    
-
-class Postnet(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super().__init__()
-        self.conv1d = nn.Conv1d(input_dim, output_dim, kernel_size=5, padding=2)
-        self.bn = nn.BatchNorm1d(output_dim)
-
-    def forward(self, x):
-        conv1d = self.conv1d(x.transpose(1, 2))
-        bn = self.bn(conv1d)
-        return bn.transpose(1, 2)
-    
-
-class DecoderPostnet(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super().__init__()
-        self.postnet = Postnet(input_dim, output_dim)
-
-    def forward(self, x):
-        return self.postnet(x)
-    
-
-class DecoderLinear(nn.Module):
-    def __init__(self, input_dim, output_dim):
-        super().__init__()
-        self.linear = nn.Linear(input_dim, output_dim)
-
-    def forward(self, x):
-        return self.linear(x)
-    
-
-
-class DecoderCBHG(nn.Module):
-
-    def __init__(self, input_dim, output_dim):
-        super().__init__()
-        self.cbhg = CBHG(in_channels=[input_dim, input_dim], out_channels=output_dim)
-
-    def forward(self, x):
-        return self.cbhg(x)
+    def forward(self, x, hidden):
+        print(f"hidden shape {hidden.shape}")
+        context, weights = self.attention(hidden, x)
+        print(context.shape)
+        rnn_input = torch.cat((context, hidden), dim=0)
+        output, hidden = self.rnn(rnn_input, hidden)
+        output = self.fc(output)
+        return output, hidden, weights
     
 
 
@@ -294,10 +221,6 @@ class DecoderCBHG(nn.Module):
 
 
 
-
-
-    
- 
 
 
 
@@ -320,22 +243,16 @@ if __name__ == "__main__":
 
     encoder = Encoder(input_dim=256, output_dim_1=128, output_dim_2=128)
 
-    output = embedding(input_id)
+    output = encoder(embedding(input_id))
 
- 
-    output = encoder(output)
+  
 
-    attention = Attention(256, 128)
+    rnnattention = AttentionRNN(256 , 256 , 256)
 
-    decoder_prenet = DecoderPrenet(256, 128, 128)
+    output , hidden , attention_weights = rnnattention(output , output)
 
-    decoder_prenet_output = decoder_prenet(output)
+   
 
-    decoder_output, decoder_hidden, attn_weight = attention(output, decoder_prenet_output)
-
-    print(decoder_output.shape)
-
-    print(decoder_hidden.shape)
 
 
     

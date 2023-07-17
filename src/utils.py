@@ -1,8 +1,10 @@
 import torch.nn as nn
-import torch.nn.functional as F
+import torchaudio.functional as F
 from torch import Tensor
 from typing import Optional
-
+import torch
+import math
+import matplotlib.pyplot as plt
 
 class Griffilin(nn.Module):
     """Compute waveform from a linear scale magnitude spectrogram using the Griffin-Lim transformation.
@@ -33,7 +35,7 @@ class Griffilin(nn.Module):
     ):
         super().__init__()
 
-    def forward(
+    def forward(self,
         specgram: Tensor,
         window: Tensor,
         n_fft: int,
@@ -58,3 +60,25 @@ class Griffilin(nn.Module):
             length,
             rand_init,
         )
+
+
+
+if __name__=="__main__":
+
+    grid = Griffilin()
+    specgram = torch.randn(1, 1025, 400)
+    window = torch.hann_window(400)
+    n_fft = 1024
+    hop_length = 256
+    win_length = 400
+    power = 2
+    n_iter = 32
+    momentum = 0.99
+    length = 400
+    rand_init = True
+
+    waveform = grid(specgram, window, n_fft, hop_length, win_length, power, n_iter, momentum, length, rand_init)
+
+    print(waveform.shape)
+
+    plt.plot(waveform.squeeze().numpy())
