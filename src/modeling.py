@@ -235,6 +235,64 @@ class DecoderPrenet(EncoderPrenet):
 
 
 
+class Decoder(nn.Module):
+    # 2-layer residual GRU (256 cells)
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.rnn1 = nn.GRU(input_dim, output_dim, batch_first=True)
+        self.rnn2 = nn.GRU(output_dim, output_dim, batch_first=True)
+
+    def forward(self, x):
+        rnn1_output, _ = self.rnn1(x)
+        rnn2_output, _ = self.rnn2(rnn1_output + x)
+        return rnn2_output + rnn1_output + x
+    
+
+class Postnet(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.conv1d = nn.Conv1d(input_dim, output_dim, kernel_size=5, padding=2)
+        self.bn = nn.BatchNorm1d(output_dim)
+
+    def forward(self, x):
+        conv1d = self.conv1d(x.transpose(1, 2))
+        bn = self.bn(conv1d)
+        return bn.transpose(1, 2)
+    
+
+class DecoderPostnet(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.postnet = Postnet(input_dim, output_dim)
+
+    def forward(self, x):
+        return self.postnet(x)
+    
+
+class DecoderLinear(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.linear = nn.Linear(input_dim, output_dim)
+
+    def forward(self, x):
+        return self.linear(x)
+    
+
+
+class DecoderCBHG(nn.Module):
+
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        self.cbhg = CBHG(in_channels=[input_dim, input_dim], out_channels=output_dim)
+
+    def forward(self, x):
+        return self.cbhg(x)
+    
+
+
+
+
+
 
 
 
@@ -267,13 +325,17 @@ if __name__ == "__main__":
  
     output = encoder(output)
 
-    attention = Attention(256, 256)
+    attention = Attention(256, 128)
 
-    decoder_hidden = torch.zeros(1, 256)
+    decoder_prenet = DecoderPrenet(256, 128, 128)
 
-    context = attention(output, decoder_hidden)
+    decoder_prenet_output = decoder_prenet(output)
 
-    print(context)
+    decoder_output, decoder_hidden, attn_weight = attention(output, decoder_prenet_output)
+
+    print(decoder_output.shape)
+
+    print(decoder_hidden.shape)
 
 
     
