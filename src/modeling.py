@@ -62,7 +62,6 @@ class Conv1dBank(nn.Module):
     -------
         conv1d: 1D convolutional layer
 
-
     """
 
     def __init__(self, in_channels, out_channels, kernel_size):
@@ -186,18 +185,13 @@ class Attention(nn.Module):
 
     def forward(self, query, keys):
 
-   
         scores = self.Va(torch.tanh(self.Wa(query) + self.Ua(keys)))
-
-        print(f"the scores shape {scores.shape}")
-
         scores = scores.squeeze(2).unsqueeze(1)
 
         weights = F.softmax(scores, dim=-1)
         context = torch.bmm(weights, keys)
 
         return context, weights
-
 
 
 class AttentionRNN(nn.Module):
@@ -209,9 +203,8 @@ class AttentionRNN(nn.Module):
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x, hidden):
-     
+
         context, weights = self.attention(hidden, x)
-        print("the output attention" , context.shape)
         rnn_input = torch.cat((context, hidden), dim=2)
         output, hidden = self.rnn(rnn_input, hidden)
         output = self.fc(output)
@@ -224,8 +217,82 @@ class DecoderPrenett(EncoderPrenet):
 
     def forward(self, x):
         return super().forward(x)
-    
 
+
+class PostCBHG(CBHG):
+    def __init__(
+        self,
+        in_channels=[256, 128],
+        out_channels=128,
+        projecions=[256, 80],
+        kernel_size=[8, 3],
+    ):
+        super().__init__(in_channels, out_channels, projecions, kernel_size)
+
+    def forward(self, x):
+        return super().forward(x)
+
+
+class Decoder(nn.Module):
+    def __init__(
+        self,
+        input_dim,
+        output_dim_1,
+        output_dim_2,
+        in_channels=[256, 128],
+        out_channels=128,
+        projecions=[256, 80],
+        kernel_size=[8, 3],
+    ):
+        super().__init__()
+        self.pre_net = DecoderPrenett(input_dim, output_dim_1, output_dim_2)
+        self.attention_rnn = AttentionRNN(output_dim_2, 256, 256)
+        self.post_cbhg = PostCBHG(in_channels, out_channels, projecions, kernel_size)
+        self.fc = nn.Linear(out_channels, 80)
+
+    def forward(self, x, hidden):
+        prenet = self.pre_net(x)
+        attention_rnn, hidden, weights = self.attention_rnn(prenet, hidden)
+        post_cbhg = self.post_cbhg(attention_rnn)
+        fc = self.fc(post_cbhg)
+        return fc, hidden, weights
+
+
+class Tacotron(nn.Module):
+    def __init__(
+        self,
+        input_dim,
+        output_dim_1,
+        output_dim_2,
+        in_channels=[256, 128],
+        out_channels=128,
+        projecions=[256, 80],
+        kernel_size=[8, 3],
+    ):
+        super().__init__()
+        self.encoder = Encoder(
+            input_dim,
+            output_dim_1,
+            output_dim_2,
+            in_channels,
+            out_channels,
+            projecions,
+            kernel_size,
+        )
+        self.decoder = Decoder(
+            input_dim,
+            output_dim_1,
+            output_dim_2,
+            in_channels,
+            out_channels,
+            projecions,
+            kernel_size,
+        )
+
+    def forward(self, x, hidden):
+        encoder = self.encoder(x)
+        decoder, hidden, weights = self.decoder(encoder, hidden)
+        return decoder, hidden, weights
 
 
 if __name__ == "__main__":
@@ -243,21 +310,34 @@ if __name__ == "__main__":
 
     input_id = torch.tensor(input_id).unsqueeze(0)
 
+    ################# Embedding #####################
+
     embedding = CEmbedding(vocab_size, out_embd=256)
+
+    ################# Encoder #####################
 
     encoder = Encoder(input_dim=256, output_dim_1=128, output_dim_2=128)
 
     output = encoder(embedding(input_id))
- 
 
-    input_decoder = torch.zeros((1, 1, 256))
+    ################# Attention #####################
+
+    attention = Attention(input_dim=256, hidden_dim=256)
+
+    context, weights = attention(output, output)
+
+    ################# Decoder #####################
 
     decoder = AttentionRNN(input_dim=256, hidden_dim=256, output_dim=256)
 
-    output, hidden, weights = decoder(output, input_decoder)
+    input_decoder = torch.zeros((1, 1, 256))
 
-    print(output)
+    output, hidden, weights = decoder(context, input_decoder)
 
+    ################# Post CBHG #####################
 
+    post_cbhg = PostCBHG()
 
+    output = post_cbhg(output)
 
+    print(output.shape)
