@@ -233,66 +233,32 @@ class PostCBHG(CBHG):
         return super().forward(x)
 
 
-class Decoder(nn.Module):
-    def __init__(
-        self,
-        input_dim,
-        output_dim_1,
-        output_dim_2,
-        in_channels=[256, 128],
-        out_channels=128,
-        projecions=[256, 80],
-        kernel_size=[8, 3],
-    ):
-        super().__init__()
-        self.pre_net = DecoderPrenett(input_dim, output_dim_1, output_dim_2)
-        self.attention_rnn = AttentionRNN(output_dim_2, 256, 256)
-        self.post_cbhg = PostCBHG(in_channels, out_channels, projecions, kernel_size)
-        self.fc = nn.Linear(out_channels, 80)
-
-    def forward(self, x, hidden):
-        prenet = self.pre_net(x)
-        attention_rnn, hidden, weights = self.attention_rnn(prenet, hidden)
-        post_cbhg = self.post_cbhg(attention_rnn)
-        fc = self.fc(post_cbhg)
-        return fc, hidden, weights
-
-
 class Tacotron(nn.Module):
     def __init__(
         self,
-        input_dim,
-        output_dim_1,
-        output_dim_2,
-        in_channels=[256, 128],
-        out_channels=128,
-        projecions=[256, 80],
-        kernel_size=[8, 3],
+        vocab_size,
+        out_embd=256,
+        input_dim=256,
+        output_dim_1=128,
+        output_dim_2=128,
+        hidden_dim=256,
+        output_dim=256,
     ):
         super().__init__()
-        self.encoder = Encoder(
-            input_dim,
-            output_dim_1,
-            output_dim_2,
-            in_channels,
-            out_channels,
-            projecions,
-            kernel_size,
-        )
-        self.decoder = Decoder(
-            input_dim,
-            output_dim_1,
-            output_dim_2,
-            in_channels,
-            out_channels,
-            projecions,
-            kernel_size,
-        )
+        self.embedding = CEmbedding(vocab_size, out_embd)
+        self.encoder = Encoder(input_dim, output_dim_1, output_dim_2)
+        self.attention = Attention(hidden_dim, hidden_dim)
+        self.rnn_attention = AttentionRNN(input_dim, hidden_dim, output_dim)
 
-    def forward(self, x, hidden):
-        encoder = self.encoder(x)
-        decoder, hidden, weights = self.decoder(encoder, hidden)
-        return decoder, hidden, weights
+    def forward(self, x, hidden_state):
+
+        output = self.encoder(self.embedding(x))
+
+        context, weights = self.attention(output, output)
+
+        output, hidden, weights = self.rnn_attention(context, hidden_state)
+
+        return output, hidden, weights
 
 
 if __name__ == "__main__":
@@ -310,34 +276,10 @@ if __name__ == "__main__":
 
     input_id = torch.tensor(input_id).unsqueeze(0)
 
-    ################# Embedding #####################
+    hidden_state = torch.zeros((1, 1, 256))
 
-    embedding = CEmbedding(vocab_size, out_embd=256)
+    model = Tacotron(vocab_size)
 
-    ################# Encoder #####################
+    output, hidden_state, weights = model(input_id, hidden_state)
 
-    encoder = Encoder(input_dim=256, output_dim_1=128, output_dim_2=128)
-
-    output = encoder(embedding(input_id))
-
-    ################# Attention #####################
-
-    attention = Attention(input_dim=256, hidden_dim=256)
-
-    context, weights = attention(output, output)
-
-    ################# Decoder #####################
-
-    decoder = AttentionRNN(input_dim=256, hidden_dim=256, output_dim=256)
-
-    input_decoder = torch.zeros((1, 1, 256))
-
-    output, hidden, weights = decoder(context, input_decoder)
-
-    ################# Post CBHG #####################
-
-    post_cbhg = PostCBHG()
-
-    output = post_cbhg(output)
-
-    print(output.shape)
+    print(output)
