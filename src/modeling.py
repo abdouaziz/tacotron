@@ -245,6 +245,7 @@ class Tacotron(nn.Module):
         output_dim=256,
     ):
         super().__init__()
+
         self.embedding = CEmbedding(vocab_size, out_embd)
         self.encoder = Encoder(input_dim, output_dim_1, output_dim_2)
         self.attention = Attention(hidden_dim, hidden_dim)
@@ -282,4 +283,8 @@ if __name__ == "__main__":
 
     output, hidden_state, weights = model(input_id, hidden_state)
 
-    print(output)
+    fc = nn.Linear(256, 80)
+
+    output = fc(output)
+
+    print(output.shape)
