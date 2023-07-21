@@ -6,6 +6,7 @@ import torch
 import math
 import matplotlib.pyplot as plt
 
+
 class Griffilin(nn.Module):
     """Compute waveform from a linear scale magnitude spectrogram using the Griffin-Lim transformation.
 
@@ -35,7 +36,8 @@ class Griffilin(nn.Module):
     ):
         super().__init__()
 
-    def forward(self,
+    def forward(
+        self,
         specgram: Tensor,
         window: Tensor,
         n_fft: int,
@@ -62,7 +64,7 @@ class Griffilin(nn.Module):
         )
 
 
-
+""" 
 if __name__=="__main__":
 
     grid = Griffilin()
@@ -81,4 +83,4 @@ if __name__=="__main__":
 
     print(waveform.shape)
 
-    plt.plot(waveform.squeeze().numpy())
+    plt.plot(waveform.squeeze().numpy()) """
