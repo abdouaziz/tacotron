@@ -50,20 +50,6 @@ class CEmbedding(nn.Module):
 
 
 class Conv1dBank(nn.Module):
-    """
-    Conv1D bank: K=16, conv-k-128-ReLU Max pooling: stride=1, width=2
-
-    arguements:
-    -----------
-        in_channels: input channels
-        out_channels: output channels
-        kernel_size: kernel size
-    return:
-    -------
-        conv1d: 1D convolutional layer
-
-    """
-
     def __init__(self, in_channels, out_channels, kernel_size):
         super().__init__()
         self.conv = nn.Sequential(
@@ -260,31 +246,3 @@ class Tacotron(nn.Module):
         output, hidden, weights = self.rnn_attention(context, hidden_state)
 
         return output, hidden, weights
-
-
-if __name__ == "__main__":
-
-    MAX_LEN = 30
-
-    text = "Hello World"
-
-    vocab = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',.!?;: "
-
-    vocab_size = len(vocab)
-
-    input_id = [lookup[s] for s in text if s in alphabet]
-    input_id = input_id + [0] * (MAX_LEN - len(input_id))
-
-    input_id = torch.tensor(input_id).unsqueeze(0)
-
-    hidden_state = torch.zeros((1, 1, 256))
-
-    model = Tacotron(vocab_size)
-
-    output, hidden_state, weights = model(input_id, hidden_state)
-
-    fc = nn.Linear(256, 80)
-
-    output = fc(output)
-
-    print(output.shape)

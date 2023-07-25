@@ -4,5 +4,5 @@ This is a PyTorch implementation of [Natural TTS Synthesis by Conditioning WaveN
 In this replemntation version we use Scaled Dot-Product Attention instead of Location-Sensitive Attention.
 
 <p align="center">
-<img src="./img/fig.png" width="700" height="400"/>
+<img src="./figures/fig.png" width="700" height="400"/>
 </p>
