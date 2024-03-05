@@ -89,7 +89,7 @@ At present, there are two mainstream acoustic model structures.
    - The alignment matrix of previous time is considered at the step `t` of decoder.
 
 <div align="left">
-  <img src="https://paddlespeech.bj.bcebos.com/Parakeet/docs/images/tacotron2.png" width=700 /> <br>
+  <img src="https://paddlespeech.bj.bcebos.com/Parakeet/docs/images/tacotron2.png" width=500 /> <br>
 </div>
 
 You can find Parakeet's tacotron2 example at `Parakeet/examples/tacotron2`.
@@ -118,7 +118,7 @@ Transformer TTS is a combination of Tacotron2 and Transformer.
     - Positional Encoding.
 
 <div align="left">
-  <img src="https://paddlespeech.bj.bcebos.com/Parakeet/docs/images/transformer.png" width=700 /> <br>
+  <img src="https://paddlespeech.bj.bcebos.com/Parakeet/docs/images/transformer.png" width=500 /> <br>
 </div>
 
 #### Transformer TTS
@@ -138,7 +138,7 @@ Transformer TTS is a seq2seq acoustic model based on Transformer and Tacotron2.
     - Uniform scale position encoding may have a negative impact on input or output sequences.
 
 <div align="left">
-  <img src="https://paddlespeech.bj.bcebos.com/Parakeet/docs/images/transformer_tts.png" width=700 /> <br>
+  <img src="https://paddlespeech.bj.bcebos.com/Parakeet/docs/images/transformer_tts.png" width=500 /> <br>
 </div>
 
 **Disadvantages of Transformer TTS:**
