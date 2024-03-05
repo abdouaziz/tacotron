@@ -246,3 +246,8 @@ class Tacotron(nn.Module):
         output, hidden, weights = self.rnn_attention(context, hidden_state)
 
         return output, hidden, weights
+
+
+if __name__ == "__main__":
+    
+    print(len(alphabet))

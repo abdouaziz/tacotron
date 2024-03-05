@@ -14,6 +14,7 @@ class Griffilin(nn.Module):
     ):
         super().__init__()
 
+    @torch.no_grad()
     def forward(
         self,
         specgram: Tensor,
