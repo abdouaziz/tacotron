@@ -51,8 +51,7 @@ class AttentionWrapper(nn.Module):
         self.attention_mechanism = attention_mechanism
         self.score_mask_value = score_mask_value
 
-    def forward(self, query, attention, cell_state, memory,
-                processed_memory=None, mask=None, memory_lengths=None):
+    def forward(self, query, attention, cell_state, memory,processed_memory=None, mask=None, memory_lengths=None):
         if processed_memory is None:
             processed_memory = memory
         if memory_lengths is not None and mask is None:
