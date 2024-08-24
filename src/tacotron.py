@@ -351,7 +351,7 @@ class Tacotron(nn.Module):
         return model
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
 
-    tacotron = Tacotron(n_vocab=32_000)
-    print(tacotron)
+#     tacotron = Tacotron(n_vocab=32_000)
+#     print(tacotron)
