@@ -1,4 +1,3 @@
-# test the tacotron model 
 from src import Tacotron
 
 
