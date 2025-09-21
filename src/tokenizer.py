@@ -2,27 +2,35 @@ import torch
 import pickle
 import os
 from datasets import load_dataset, Audio
+from log import get_logger , setup_logging
+
+
+setup_logging("logs/simple.log", "INFO")
+    
+
+
+logger = get_logger("Dataset")
+    
+
 
 class Tokenizer:
-    def __init__(self, path_or_name, sampling_rate=16000, split="train", cache_dir="./cache"):
+    def __init__(self, path_or_name="abdouaziiz/alffa", sampling_rate=16000, split="train+validation+test", cache_dir="./cache"):
         self.path_or_name = path_or_name
         self.sampling_rate = sampling_rate
         self.split = split
         
         os.makedirs(cache_dir, exist_ok=True)
         
-        # Create cache filename based on dataset parameters
         cache_filename = f"{path_or_name.replace('/', '_')}_{split}_{sampling_rate}.pkl"
         self.cache_path = os.path.join(cache_dir, cache_filename)
         
-        # Try to load from cache, otherwise build vocabulary
         if self._load_from_cache():
-            print(f"Loaded from cache: {cache_filename}")
+            logger.info(f"Loaded from cache: {cache_filename}")
         else:
-            print("Building vocabulary from dataset...")
+            logger.info("Building vocabulary from dataset...")
             self._build_vocabulary()
             self._save_to_cache()
-            print(f"Saved to cache: {cache_filename}")
+            logger.info(f"Saved to cache: {cache_filename}")
     
     def _build_vocabulary(self):
         """Build vocabulary from dataset"""
@@ -113,17 +121,17 @@ class Tokenizer:
         """Delete cache file"""
         if os.path.exists(self.cache_path):
             os.remove(self.cache_path)
-            print(f"Cache cleared: {self.cache_path}")
+            logger.info(f"Cache cleared: {self.cache_path}")
 
 
 
-if __name__=="__main__":
+# if __name__=="__main__":
 
-    tranform = Tokenizer(path_or_name="abdouaziiz/alffa")
+#     tranform = Tokenizer(path_or_name="abdouaziiz/alffa")
 
-    text ="dafa ma ko wax may rabat lu ma waroona def"
+#     text ="dafa ma ko wax may rabat lu ma waroona def"
 
-    ids = tranform.encode(text)
-    print(ids)       
-    print("je suis la ",tranform.decode(ids ,include_special_tokens=True))
+#     ids = tranform.encode(text)
+#     print(ids)       
+#     print("je suis la ",tranform.decode(ids ,include_special_tokens=True))
 

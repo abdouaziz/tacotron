@@ -12,15 +12,18 @@ from datasets import load_dataset
 from typing import Union
 
 from tokenizer import Tokenizer
-import logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
+from log import setup_logging , get_logger
 
+
+
+
+setup_logging()
+    
+
+
+logger = get_logger("Dataset")
+   
 
 class AudioException(Exception):
     pass
@@ -58,7 +61,7 @@ class AudioMelConversions(AudioProcessing):
     def __init__(
         self,
         num_mels=80,
-        sampling_rate=22050,
+        sampling_rate=16000,
         n_fft=1024,
         window_size=1024,
         hop_size=256,
@@ -201,7 +204,7 @@ class TTSDataset(Dataset):
     def __init__(
         self,
         name_or_path,
-        sample_rate=22050,
+        sample_rate=16000,
         n_fft=1024,
         window_size=1024,
         hop_size=256,
@@ -261,6 +264,81 @@ class TTSDataset(Dataset):
         return transcript, mel.squeeze(0), transcript_ids.squeeze(0)
 
 
+def TTSCollator():
+
+    tokenizer = Tokenizer()
+
+    def _collate_fn(batch):
+        
+        texts = [tokenizer.encode(b[0]) for b in batch]
+        mels = [b[1] for b in batch]
+        
+        ### Get Lengths of Texts and Mels ###
+        input_lengths = torch.tensor([t.shape[0] for t in texts], dtype=torch.long)
+        output_lengths = torch.tensor([m.shape[1] for m in mels], dtype=torch.long)
+
+        ### Sort by Text Length (as we will be using packed tensors later) ###
+        input_lengths, sorted_idx = input_lengths.sort(descending=True)
+        texts = [texts[i] for i in sorted_idx]
+        mels = [mels[i] for i in sorted_idx]
+        output_lengths = output_lengths[sorted_idx]
+
+        ### Pad Text ###
+        text_padded = torch.nn.utils.rnn.pad_sequence(texts, batch_first=True, padding_value=tokenizer.pad_token_id)
+
+        ### Pad Mel Sequences ###
+        max_target_len = max(output_lengths).item()
+        num_mels = mels[0].shape[0]
+        
+        ### Get gate which tells when to stop decoding. 0 is keep decoding, 1 is stop ###
+        mel_padded = torch.zeros((len(mels), num_mels, max_target_len))
+        gate_padded = torch.zeros((len(mels), max_target_len))
+
+        for i, mel in enumerate(mels):
+            t = mel.shape[1]
+            mel_padded[i, :, :t] = mel
+            gate_padded[i, t-1:] = 1
+        
+        mel_padded = mel_padded.transpose(1,2)
+
+        return text_padded, input_lengths, mel_padded, gate_padded, build_padding_mask(input_lengths), build_padding_mask(output_lengths)
+
+
+    return _collate_fn
+
+
+
+class BatchSampler:
+    def __init__(self, dataset, batch_size, drop_last=False):
+        self.sampler = torch.utils.data.SequentialSampler(dataset)
+        self.batch_size = batch_size
+        self.drop_last = drop_last
+        self.random_batches = self._make_batches()
+
+    def _make_batches(self):
+
+        indices = [i for i in self.sampler]
+
+        if self.drop_last:
+
+            total_size = (len(indices) // self.batch_size) * self.batch_size
+            indices = indices[:total_size]
+
+        batches = [indices[i:i+self.batch_size] for i in range(0, len(indices), self.batch_size)]
+        random_indices = torch.randperm(len(batches))
+        return [batches[i] for i in random_indices]
+    
+    def __iter__(self):
+        for batch in self.random_batches:
+            yield batch
+
+    def __len__(self):
+        return len(self.random_batches)
+
+
+
+
+
 if __name__ == "__main__":
 
     # audiotts = AudioMelConversions(
@@ -277,12 +355,18 @@ if __name__ == "__main__":
 
     # print(mel.shape)
 
-    ds = TTSDataset(name_or_path="abdouaziiz/alffa", split="train+validation+test")
 
     from torch.utils.data import DataLoader
 
-    dl = DataLoader(dataset=ds, batch_size=1)
+    ds = TTSDataset(name_or_path="abdouaziiz/alffa", split="train+validation+test")
 
-    data = next(iter(dl))
+    train_sampler = BatchSampler(ds, batch_size=1 )
 
-    print(data)
+    loader = DataLoader(ds,batch_sampler=train_sampler , collate_fn=TTSCollator())
+    
+    for text_padded, input_lengths, mel_padded, gate_padded, encoder_mask, decoder_mask in loader:
+
+        print(mel_padded.shape, text_padded.shape)
+        print()
+ 
+        break
