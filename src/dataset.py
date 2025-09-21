@@ -340,6 +340,7 @@ class BatchSampler:
 
 
 if __name__ == "__main__":
+    pass 
 
     # audiotts = AudioMelConversions(
     #     sampling_rate=16000
@@ -356,17 +357,17 @@ if __name__ == "__main__":
     # print(mel.shape)
 
 
-    from torch.utils.data import DataLoader
+    # from torch.utils.data import DataLoader
 
-    ds = TTSDataset(name_or_path="abdouaziiz/alffa", split="train+validation+test")
+    # ds = TTSDataset(name_or_path="abdouaziiz/alffa", split="train+validation+test")
 
-    train_sampler = BatchSampler(ds, batch_size=1 )
+    # train_sampler = BatchSampler(ds, batch_size=1 )
 
-    loader = DataLoader(ds,batch_sampler=train_sampler , collate_fn=TTSCollator())
+    # loader = DataLoader(ds,batch_sampler=train_sampler , collate_fn=TTSCollator())
     
-    for text_padded, input_lengths, mel_padded, gate_padded, encoder_mask, decoder_mask in loader:
+    # for text_padded, input_lengths, mel_padded, gate_padded, encoder_mask, decoder_mask in loader:
 
-        print(mel_padded.shape, text_padded.shape)
-        print()
+    #     print(mel_padded.shape, text_padded.shape)
+    #     print()
  
-        break
+    #     break.

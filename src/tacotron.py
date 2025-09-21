@@ -4,6 +4,11 @@ import torch.nn.functional as F
 from utils import BahdanauAttention, AttentionWrapper, get_mask_from_lengths
 from torch.autograd import Variable
 
+from dataset import TTSDataset , TTSCollator
+
+
+
+
 
 
 class Embedding(nn.Module):
@@ -88,3 +93,29 @@ class Encoder(nn.Module):
         return outputs  # (B, T, 2 * lstm_hidden_size)
     
     
+
+if __name__=="__main__":
+
+
+    from torch.utils.data import DataLoader
+
+    ds = TTSDataset(name_or_path="abdouaziiz/alffa", split="train+validation+test")
+
+    #train_sampler = BatchSampler(ds, batch_size=1 )
+
+    loader = DataLoader(ds,batch_size=1, collate_fn=TTSCollator())
+    
+    text_padded, input_lengths, mel_padded, gate_padded, encoder_mask, decoder_mask = next(iter(loader)) 
+
+    print(text_padded.shape , mel_padded.shape)
+
+
+    model = Encoder(
+        char_dim=42
+    )
+
+    output = model(text_padded)
+
+    print(output)
+
+ 

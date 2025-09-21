@@ -5,11 +5,11 @@ from datasets import load_dataset, Audio
 from log import get_logger , setup_logging
 
 
-setup_logging("logs/simple.log", "INFO")
+setup_logging()
     
 
 
-logger = get_logger("Dataset")
+logger = get_logger("Tokenizer")
     
 
 
@@ -58,6 +58,9 @@ class Tokenizer:
         self.pad_token_id = self.char2id[self.pad_token]
         self.unk_token_id = self.char2id[self.unk_token]
         self.vocab_size = len(self.chars)
+
+        logger.info(f"Tokenizer size : {self.vocab_size} of characters .")
+
     
     def _save_to_cache(self):
         """Save vocabulary to cache file"""
@@ -82,6 +85,8 @@ class Tokenizer:
         if not os.path.exists(self.cache_path):
             return False
         
+        
+        
         try:
             with open(self.cache_path, 'rb') as f:
                 cache_data = pickle.load(f)
@@ -96,6 +101,9 @@ class Tokenizer:
             self.pad_token_id = cache_data['pad_token_id']
             self.unk_token_id = cache_data['unk_token_id']
             self.vocab_size = cache_data['vocab_size']
+
+            logger.info(f"Tokenizer size : {self.vocab_size} of characters .")
+
             
             return True
         except:
