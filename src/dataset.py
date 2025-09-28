@@ -154,9 +154,7 @@ class AudioMelConversions(AudioProcessing):
 
         if do_norm:
 
-            mel = self.normalize(
-                mel, min_db=self.min_db, max_abs_val=self.max_scaled_abs
-            )
+            mel = self.normalize(mel, min_db=self.min_db, max_abs_val=self.max_scaled_abs)
 
         return mel
 
@@ -164,9 +162,7 @@ class AudioMelConversions(AudioProcessing):
 
         if do_denorm:
 
-            mel = self.denormalize(
-                mel, min_db=self.min_db, max_abs_val=self.max_scaled_abs
-            )
+            mel = self.denormalize(mel, min_db=self.min_db, max_abs_val=self.max_scaled_abs)
 
         mel = self.db_to_amplitude(mel)
 
@@ -357,17 +353,17 @@ if __name__ == "__main__":
     # print(mel.shape)
 
 
-    # from torch.utils.data import DataLoader
+    from torch.utils.data import DataLoader
 
-    # ds = TTSDataset(name_or_path="abdouaziiz/alffa", split="train+validation+test")
+    ds = TTSDataset(name_or_path="abdouaziiz/alffa", split="train+validation+test")
 
-    # train_sampler = BatchSampler(ds, batch_size=1 )
+    train_sampler = BatchSampler(ds, batch_size=2 )
 
-    # loader = DataLoader(ds,batch_sampler=train_sampler , collate_fn=TTSCollator())
+    loader = DataLoader(ds,batch_sampler=train_sampler , collate_fn=TTSCollator())
     
-    # for text_padded, input_lengths, mel_padded, gate_padded, encoder_mask, decoder_mask in loader:
+    for text_padded, input_lengths, mel_padded, gate_padded, encoder_mask, decoder_mask in loader:
 
-    #     print(mel_padded.shape, text_padded.shape)
-    #     print()
+        print(mel_padded, text_padded)
+        print()
  
-    #     break.
+        break
